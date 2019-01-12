@@ -1,7 +1,7 @@
 #!/usr/bin/env ccs-script
 import sys
 sys.path.insert(0,"/gpfs/slac/lsst/fs1/g/data/youtsumi/fp-scripts/lib")
-from org.lsst.ccs.scripting import CCS
+from org.lsst.ccs.scripting import CCS, ScriptingTimeoutException
 from org.lsst.ccs.bus.states import AlertState
 from org.lsst.ccs.messaging import CommandRejectedException
 from java.time import Duration
@@ -9,6 +9,17 @@ from ccs import proxies
 import re
 import math
 import time
+
+
+def CCSattachProxy(target):
+	""" Improve reliability """
+	for i in range(3):
+		try:
+			return CCS.attachProxy(target)
+		except ScriptingTimeoutException as ex:
+			print ex.reason
+			continue
+	raise
 
 
 class Monitor:
@@ -104,14 +115,13 @@ def Cleanup():
 def toggle( string, state ):
 	print("Turn {} {}".format(string, state))
 	target = string.split("/")
-	pduprxy = CCS.attachProxy(target[0])
+	pduprxy = CCSattachProxy(target[0])
 	pduprxy = getattr(pduprxy,target[1])()
 	pduprxy = getattr(pduprxy,"forceOutlet{}".format(state.capitalize()))
 	pduprxy("{}".format(target[2]))
-	del pduprxy
-	
+
 def ScrollPump( state ):
-	toggle("pap-pdu/PDU230/Outlet-21",state)
+	toggle("pap-pdu/PDU230/vacuumscrollpump",state)
 
 def NitrogenFlow( state ):
 	toggle("pap-pdu/PDU120/nitrogenvalve",state)
@@ -120,11 +130,13 @@ def NitrogenHeater( state ):
 	toggle("pap-pdu/PDU120/n2heater",state)
 
 if __name__=="__main__":
-	ScrollPump("On")
-#	thermal = CCS.attachProxy("thermal")
+	for i in range(10):
+		toggle("pap-pdu/PDU120/Outlet-1","on")
+		toggle("pap-pdu/PDU120/Outlet-1","off")
+#	thermal = CCSattachProxy("thermal")
 #	thermaltemp=Monitor(thermal)
 #	thermaltemp.PrintValues()
-#        vacuum= CCS.attachProxy("vacuum")
+#        vacuum= CCSattachProxy("vacuum")
 #        vacuumvalue = Monitor(vacuum)
 #	vacuumvalue.PrintValues()
 #	for i in range(1000):
