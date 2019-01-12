@@ -101,34 +101,32 @@ def Cleanup():
 
 # 3.       Close the Cryostat gate valve.
 
+def toggle( string, state ):
+	print("Turn {} {}".format(string, state))
+	target = string.split("/")
+	pduprxy = CCS.attachProxy(target[0])
+	pduprxy = getattr(pduprxy,target[1])()
+	pduprxy = getattr(pduprxy,"forceOutlet{}".format(state.capitalize()))
+	pduprxy("{}".format(target[2]))
+	del pduprxy
+	
 def ScrollPump( state ):
-	print("Turn ScrollPump {}".format(state))
-	if state =="on":
-		print state
-	elif state =="off":
-		print state
+	toggle("pap-pdu/PDU230/Outlet-21",state)
 
 def NitrogenFlow( state ):
-	print("Turn NitrogenFlow {}".format(state))
-	if state =="on":
-		print state
-	elif state =="off":
-		print state
+	toggle("pap-pdu/PDU120/nitrogenvalve",state)
 
 def NitrogenHeater( state ):
-	print("Turn NitrogenHeater {}".format(state))
-	if state =="on":
-		print state
-	elif state =="off":
-		print state
+	toggle("pap-pdu/PDU120/n2heater",state)
 
 if __name__=="__main__":
-	thermal = CCS.attachProxy("thermal")
-	thermaltemp=Monitor(thermal)
-	thermaltemp.PrintValues()
-        vacuum= CCS.attachProxy("vacuum")
-        vacuumvalue = Monitor(vacuum)
-	vacuumvalue.PrintValues()
+	ScrollPump("On")
+#	thermal = CCS.attachProxy("thermal")
+#	thermaltemp=Monitor(thermal)
+#	thermaltemp.PrintValues()
+#        vacuum= CCS.attachProxy("vacuum")
+#        vacuumvalue = Monitor(vacuum)
+#	vacuumvalue.PrintValues()
 #	for i in range(1000):
 #		try:
 #			thermaltemp.GetCurrentValues()
