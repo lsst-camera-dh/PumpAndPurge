@@ -25,8 +25,8 @@ def CCSattachProxy(target):
 			pass
 	raise
 
-#thermal = CCSattachProxy("thermal")
-#vacuum= CCSattachProxy("vacuum")
+thermal = CCSattachProxy("thermal")
+vacuum= CCSattachProxy("vacuum")
 
 class Monitor:
 	def __init__(self,target,verbose=False):
@@ -149,6 +149,7 @@ def step5( ):
 		CheckTemp()
 
 	NitrogenHeater("off")
+	time.sleep(120)
 	NitrogenFlow("off")
 	
 def Cleanup():
@@ -218,4 +219,4 @@ if __name__=="__main__":
 	parser.add_argument('integers', metavar='N', type=int, default=40,
 			    help='an integer for cycle to be done')
 	args = parser.parse_args()
-	main(args.integers)
+#	main(args.integers)
