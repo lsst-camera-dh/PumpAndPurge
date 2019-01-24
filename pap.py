@@ -11,16 +11,17 @@ import re
 import math
 import time
 import argparse
+import logging
 
 
 def CCSattachProxy(target):
 	""" Improve reliability """
 	for i in range(3):
-		print( "{}: {}".format(target, i))
+		logging.info( "{}: {}".format(target, i))
 		try:
 			return CCS.attachProxy(target)
 		except RuntimeException as ex:
-			print( ex)
+			logging.error( ex)
 			time.sleep(1)
 			pass
 	raise
@@ -44,8 +45,7 @@ class Monitor:
 			try:
 				ccsPrxy=self.target
 				ccsPrxy = getattr(ccsPrxy,acommandtarget)()
-				if verbose:
-					print acommandtarget,ccsPrxy
+				logging.debug("{} {}".format(acommandtarget,ccsPrxy))
 				if self.result.has_key(acommandtarget):
 					self.result[acommandtarget].append(
 							ccsPrxy.getValue()
@@ -56,8 +56,7 @@ class Monitor:
 					self.result.update({acommandtarget: [ ccsPrxy.getValue() ] * self._length })
 			except CommandRejectedException:
 				self.ignorelist.append(acommandtarget)
-				if verbose:
-					print( "Failed to output {}".format(acommandtarget) )
+				logging.error("Failed to output {}".format(acommandtarget))
 
 	def Filter( self, regexp ):
 		p = re.compile(regexp)
@@ -113,9 +112,11 @@ def PriorSteps():
 
 
 def step1( ):
+	logging.info("Step 2. Turn on scroll pump")
 	ScrollPump("on")
 
 def step2( ):
+	logging.info("Step 2. Wait until pressure gets down to 100mTorr")
 	# wait until pressure gets down to 100 mTorr
 	vac = 760
 	time.sleep(20*60)
@@ -128,23 +129,23 @@ def step2( ):
 
 
 def step3( ):
-	print("Step 3. Turn off scroll pump")
+	logging.info("Step 3. Turn off scroll pump")
 	# Don't I need to close the valve here?
 	ScrollPump("off")
 
 def step4( ):
-	print("Step 4. Turn on N2 heater and flow")
+	logging.info("Step 4. Turn on N2 heater and flow")
 	NitrogenHeater("on")
 	NitrogenFlow("on")
 
 def step5( ):
 	# wait until pressure gets reached at 760 Torr
-	print("Step 5. Turn off N2 heater and flow when pressure gets reached at 760 Torr")
+	logging.info("Step 5. Turn off N2 heater and flow when pressure gets reached at 760 Torr")
 	vac = 760
 	while vac < 760:
 		# not sure why but vacuum.CryoVac canot be used
 		vac = vacuum.sendSynchCommand("CryoVac getValue")
-		print("CyroVac getValu returns {} Torr".format(vac))
+		logging.info("CyroVac getValu returns {} Torr".format(vac))
 		time.sleep(60)
 		CheckTemp()
 
@@ -153,7 +154,7 @@ def step5( ):
 	NitrogenFlow("off")
 	
 def Cleanup():
-	print("Clean up. Turn off heaters and close the valve.")
+	logging.info("Clean up. Turn off heaters and close the valve.")
 
 	# 0 (off), > 0 (manual - fixed power) or < 0 (auto - fixed temperature)
 	thermal.setHeaterControl(0, 0)	# cold plate onon
@@ -166,7 +167,7 @@ def Cleanup():
 	vacuum.setNamedSwitchOn("CryoValve",0) #### NEED TO BE TESTED
 
 def toggle( string, state ):
-	print("Turn {} {}".format(string, state))
+	logging.info("Turn {} {}".format(string, state))
 	target = string.split("/")
 	pduprxy = CCSattachProxy(target[0])
 	pduprxy = getattr(pduprxy,target[1])()
@@ -200,7 +201,7 @@ def main(N):
 
 		PriorSteps()
 		for i in range(N):
-			print("{} of {} cycles. Hit Ctrl+C if you want to abort.".format(i+1, N))
+			logging.info("{} of {} cycles. Hit Ctrl+C if you want to abort.".format(i+1, N))
 			step1()
 			step2()
 			step3()
