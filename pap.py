@@ -13,6 +13,7 @@ import time
 import argparse
 import logging
 
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 def CCSattachProxy(target):
 	""" Improve reliability """
@@ -95,42 +96,39 @@ def PriorSteps():
 #Set cryo plate temperature and cold plate temperature at feedback control. 
 #Cryo = 40 C and Cold = 40 C (Martin said that the cold plate can be set at 60 C). 
 #                The L3 lens has a upper temperature limit of 40 C.
-	thermal.setPlateTemp(0, 40)	# cold plate
-	thermal.setPlateTemp(1, 40)	# cryo plate
+#	thermal.setPlateTemp(0, 40)	# cold plate
+#	thermal.setPlateTemp(1, 40)	# cryo plate
+#
+#	# 0 (off), > 0 (manual - fixed power) or < 0 (auto - fixed temperature)
+#	thermal.setHeaterControl(0, -1)	# cold plate onon
+#	thermal.setHeaterControl(1, -1)	# cold plate onon
+#
+##2.       Turn on both cryostat housing band heaters and set the band temperature to ~40 C.
+#	thermal.setHeaterPowerEnable(0, 1)
+#	thermal.setHeaterPowerEnable(1, 1)
 
-	# 0 (off), > 0 (manual - fixed power) or < 0 (auto - fixed temperature)
-	thermal.setHeaterControl(0, -1)	# cold plate onon
-	thermal.setHeaterControl(1, -1)	# cold plate onon
-
-#2.       Turn on both cryostat housing band heaters and set the band temperature to ~40 C.
-	thermal.setHeaterPowerEnable(0, 1)
-	thermal.setHeaterPowerEnable(1, 1)
-
-
-	vacuum.setNamedSwitchOn("CryoValve",1) #### NEED TO BE TESTED
+	vacuum.setNamedSwitchOn("CryoValve",True) #### NEED TO BE TESTED
 # 3.       Open the Cryostat gate valve.
 
 
 def step1( ):
-	logging.info("Step 2. Turn on scroll pump")
+	logging.info("Step 1. Turn on scroll pump")
 	ScrollPump("on")
 
 def step2( ):
 	logging.info("Step 2. Wait until pressure gets down to 100mTorr")
 	# wait until pressure gets down to 100 mTorr
 	vac = 760
-	time.sleep(20*60)
 	while vac > 0.1:
 		# not sure why but vacuum.CryoVac canot be used
 		vac = vacuum.sendSynchCommand("CryoVac getValue")
-		print("CyroVac getValu returns {} Torr".format(vac))
+		logging.info("CyroVac getValu returns {} Torr".format(vac))
 		time.sleep(60)
-		CheckTemp()
+#		CheckTemp()
 
 
 def step3( ):
 	logging.info("Step 3. Turn off scroll pump")
-	# Don't I need to close the valve here?
 	ScrollPump("off")
 
 def step4( ):
@@ -155,16 +153,16 @@ def step5( ):
 	
 def Cleanup():
 	logging.info("Clean up. Turn off heaters and close the valve.")
-
-	# 0 (off), > 0 (manual - fixed power) or < 0 (auto - fixed temperature)
-	thermal.setHeaterControl(0, 0)	# cold plate onon
-	thermal.setHeaterControl(1, 0)	# cold plate onon
-
-	thermal.setHeaterPowerEnable(0, 0)
-	thermal.setHeaterPowerEnable(1, 0)
+#
+#	# 0 (off), > 0 (manual - fixed power) or < 0 (auto - fixed temperature)
+#	thermal.setHeaterControl(0, 0)	# cold plate onon
+#	thermal.setHeaterControl(1, 0)	# cold plate onon
+#
+#	thermal.setHeaterPowerEnable(0, 0)
+#	thermal.setHeaterPowerEnable(1, 0)
 
 # 3.       Close the Cryostat gate valve.
-	vacuum.setNamedSwitchOn("CryoValve",0) #### NEED TO BE TESTED
+	vacuum.setNamedSwitchOn("CryoValve",False) #### NEED TO BE TESTED
 
 def toggle( string, state ):
 	logging.info("Turn {} {}".format(string, state))
@@ -205,11 +203,10 @@ def main(N):
 			step1()
 			step2()
 			step3()
-			step4()
-			step5()
-
+#			step4()
+#			step5()
 	except:
-		pass
+		raise
 
 	finally:
 		Cleanup()
@@ -220,4 +217,8 @@ if __name__=="__main__":
 	parser.add_argument('integers', metavar='N', type=int, default=40,
 			    help='an integer for cycle to be done')
 	args = parser.parse_args()
-#	main(args.integers)
+
+#	ScrollPump("Off")
+#	NitrogenHeater("On")
+
+	main(args.integers)
