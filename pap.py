@@ -113,6 +113,14 @@ def PriorSteps():
 
 def step1( ):
 	logging.info("Step 1. Turn on scroll pump")
+	# wail until the pressure gets below 760 Torr
+	vac = 780
+	while vac > 760:
+		# not sure why but vacuum.CryoVac canot be used
+		vac = vacuum.sendSynchCommand("CryoVac getValue")
+		logging.info("CyroVac getValu returns {} Torr".format(vac))
+		time.sleep(6)
+
 	ScrollPump("on")
 
 def step2( ):
@@ -123,7 +131,7 @@ def step2( ):
 		# not sure why but vacuum.CryoVac canot be used
 		vac = vacuum.sendSynchCommand("CryoVac getValue")
 		logging.info("CyroVac getValu returns {} Torr".format(vac))
-		time.sleep(60)
+		time.sleep(6)
 #		CheckTemp()
 
 
@@ -133,22 +141,27 @@ def step3( ):
 
 def step4( ):
 	logging.info("Step 4. Turn on N2 heater and flow")
-	NitrogenHeater("on")
+#	NitrogenHeater("on")
 	NitrogenFlow("on")
 
 def step5( ):
 	# wait until pressure gets reached at 760 Torr
 	logging.info("Step 5. Turn off N2 heater and flow when pressure gets reached at 760 Torr")
-	vac = 760
-	while vac < 760:
+	vac = 0
+	while vac < 700:
 		# not sure why but vacuum.CryoVac canot be used
 		vac = vacuum.sendSynchCommand("CryoVac getValue")
-		logging.info("CyroVac getValu returns {} Torr".format(vac))
-		time.sleep(60)
+		logging.info("CyroVac getValu returns {} Torr: 1".format(vac))
+		time.sleep(6)
 		CheckTemp()
 
-	NitrogenHeater("off")
-	time.sleep(120)
+#	NitrogenHeater("off")
+	while vac < 750:
+		# not sure why but vacuum.CryoVac canot be used
+		vac = vacuum.sendSynchCommand("CryoVac getValue")
+		logging.info("CyroVac getValu returns {} Torr: 2".format(vac))
+		time.sleep(6)
+		CheckTemp()
 	NitrogenFlow("off")
 	
 def Cleanup():
