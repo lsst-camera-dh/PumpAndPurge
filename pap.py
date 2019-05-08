@@ -96,42 +96,48 @@ def PriorSteps():
 #Set cryo plate temperature and cold plate temperature at feedback control. 
 #Cryo = 40 C and Cold = 40 C (Martin said that the cold plate can be set at 60 C). 
 #                The L3 lens has a upper temperature limit of 40 C.
-#	thermal.setPlateTemp(0, 40)	# cold plate
-#	thermal.setPlateTemp(1, 40)	# cryo plate
+ 	thermal.setPlateTemperature(0, 35)	# cold plate
+ 	thermal.setPlateTemperature(1, 35)	# cryo plate
 #
 #	# 0 (off), > 0 (manual - fixed power) or < 0 (auto - fixed temperature)
-#	thermal.setHeaterControl(0, -1)	# cold plate onon
-#	thermal.setHeaterControl(1, -1)	# cold plate onon
+ 	thermal.setTrimHeaterState(0, -1)	# cold plate onon
+ 	thermal.setTrimHeaterState(1, -1)	# cold plate onon
 #
 ##2.       Turn on both cryostat housing band heaters and set the band temperature to ~40 C.
-#	thermal.setHeaterPowerEnable(0, 1)
-#	thermal.setHeaterPowerEnable(1, 1)
-
+ 	# thermal.setHeaterPowerEnable(0, 1)
+ 	# thermal.setHeaterPowerEnable(1, 1)
+	logging.info("PriorSteps Open the CryoValve")
 	vacuum.setNamedSwitchOn("CryoValve",True) #### NEED TO BE TESTED
 # 3.       Open the Cryostat gate valve.
 
 
 def step1( ):
 	logging.info("Step 1. Turn on scroll pump")
+
+	# just make sure
+	LowerN2Valve("off")
+	NitrogenHeater("off")
+	NitrogenFlow("off")
+
 	# wail until the pressure gets below 760 Torr
 	vac = 780
 	while vac > 760:
+		time.sleep(6)
 		# not sure why but vacuum.CryoVac canot be used
 		vac = vacuum.sendSynchCommand("CryoVac getValue")
 		logging.info("CyroVac getValu returns {} Torr".format(vac))
-		time.sleep(6)
 
 	ScrollPump("on")
 
-def step2( ):
-	logging.info("Step 2. Wait until pressure gets down to 100mTorr")
+def step2( lowpress=1. ):
+	logging.info("Step 2. Wait until pressure gets down to {} Torr".format(lowpress))
 	# wait until pressure gets down to 100 mTorr
 	vac = 760
-	while vac > 0.1:
+	while vac > lowpress:
+		time.sleep(6)
 		# not sure why but vacuum.CryoVac canot be used
 		vac = vacuum.sendSynchCommand("CryoVac getValue")
-		logging.info("CyroVac getValu returns {} Torr".format(vac))
-		time.sleep(6)
+		logging.info("CyroVac getValue returns {} Torr".format(vac))
 #		CheckTemp()
 
 
@@ -141,41 +147,45 @@ def step3( ):
 
 def step4( ):
 	logging.info("Step 4. Turn on N2 heater and flow")
-#	NitrogenHeater("on")
+	LowerN2Valve("on")
+	NitrogenHeater("on")
 	NitrogenFlow("on")
 
 def step5( ):
 	# wait until pressure gets reached at 760 Torr
 	logging.info("Step 5. Turn off N2 heater and flow when pressure gets reached at 760 Torr")
 	vac = 0
-	while vac < 700:
+	while vac < 550:
+		time.sleep(6)
 		# not sure why but vacuum.CryoVac canot be used
 		vac = vacuum.sendSynchCommand("CryoVac getValue")
-		logging.info("CyroVac getValu returns {} Torr: 1".format(vac))
-		time.sleep(6)
-		CheckTemp()
+		logging.info("CyroVac getValue returns {} Torr: 1".format(vac))
+#		CheckTemp()
 
-#	NitrogenHeater("off")
+	NitrogenHeater("off")
 	while vac < 750:
+		time.sleep(6)
 		# not sure why but vacuum.CryoVac canot be used
 		vac = vacuum.sendSynchCommand("CryoVac getValue")
-		logging.info("CyroVac getValu returns {} Torr: 2".format(vac))
-		time.sleep(6)
-		CheckTemp()
+		logging.info("CyroVac getValue returns {} Torr: 2".format(vac))
+#		CheckTemp()
 	NitrogenFlow("off")
+	LowerN2Valve("off")
 	
 def Cleanup():
 	logging.info("Clean up. Turn off heaters and close the valve.")
 #
 #	# 0 (off), > 0 (manual - fixed power) or < 0 (auto - fixed temperature)
-#	thermal.setHeaterControl(0, 0)	# cold plate onon
-#	thermal.setHeaterControl(1, 0)	# cold plate onon
-#
-#	thermal.setHeaterPowerEnable(0, 0)
-#	thermal.setHeaterPowerEnable(1, 0)
+ 	thermal.setTrimHeaterState(0, 0)	# cold plate onon
+ 	thermal.setTrimHeaterState(1, 0)	# cold plate onon
+ 	thermal.setPlateTemperature(0, 17)	# cold plate
+ 	thermal.setPlateTemperature(1, 17)	# cryo plate
 
 # 3.       Close the Cryostat gate valve.
 	vacuum.setNamedSwitchOn("CryoValve",False) #### NEED TO BE TESTED
+	NitrogenHeater("off")
+	NitrogenFlow("off")
+	LowerN2Valve("off")
 
 def toggle( string, state ):
 	logging.info("Turn {} {}".format(string, state))
@@ -194,44 +204,43 @@ def NitrogenFlow( state ):
 def NitrogenHeater( state ):
 	toggle("pap-pdu/PDU120/n2heater",state)
 
+def LowerN2Valve( state ):
+	toggle("pap-pdu/PDU120/lowern2valve",state)
 
 def CheckTemp( ):
+	thermaltemp=Monitor(thermal)
 	thermaltemp.GetCurrentValues()
 	if thermaltemp.stats(r"CRY-CLP.*")["max"] > 50:
 		raise Exception("Hits the cold plate temperature limit")
 	if thermaltemp.stats(r"CRY-CYP.*")["max"] > 50:
 		raise Exception("Hits the cryo plate temperature limit")
 
-
-
 # main statement
-def main(N):
+def main(N,lowpress):
 	try:
-		thermaltemp=Monitor(thermal)
-		vacuumvalue=Monitor(vacuum)
-
 		PriorSteps()
 		for i in range(N):
 			logging.info("{} of {} cycles. Hit Ctrl+C if you want to abort.".format(i+1, N))
 			step1()
-			step2()
+			step2(lowpress)
 			step3()
-#			step4()
-#			step5()
-	except:
+			step4()
+			step5()
+
+	except KeyboardInterrupt:
 		raise
+
+	except:
+		import traceback
+		traceback.print_exc()
 
 	finally:
 		Cleanup()
 
-
 if __name__=="__main__":
 	parser = argparse.ArgumentParser(description='A script to do pump and purge')
 	parser.add_argument('integers', metavar='N', type=int, default=40,
-			    help='an integer for cycle to be done')
+	    help='an integer for cycle to be done')
 	args = parser.parse_args()
 
-#	ScrollPump("Off")
-#	NitrogenHeater("On")
-
-	main(args.integers)
+	main(args.integers,2.0)
