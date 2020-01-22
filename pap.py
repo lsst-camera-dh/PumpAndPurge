@@ -98,10 +98,11 @@ def PriorSteps():
 #                The L3 lens has a upper temperature limit of 40 C.
  	thermal.setPlateTemperature(0, 35)	# cold plate
  	thermal.setPlateTemperature(1, 35)	# cryo plate
+
 #
 #	# 0 (off), > 0 (manual - fixed power) or < 0 (auto - fixed temperature)
- 	thermal.setTrimHeaterState(0, -1)	# cold plate onon
- 	thermal.setTrimHeaterState(1, -1)	# cold plate onon
+# 	thermal.setTrimHeaterState(0, -1)	# cold plate onon
+# 	thermal.setTrimHeaterState(1, -1)	# cold plate onon
 #
 ##2.       Turn on both cryostat housing band heaters and set the band temperature to ~40 C.
  	# thermal.setHeaterPowerEnable(0, 1)
@@ -226,6 +227,14 @@ def main(N,lowpress):
 			step3()
 			step4()
 			step5()
+ 		thermal.setTrimHeaterPower(0, 0)
+ 		thermal.setTrimHeaterPower(1, 0)
+ 		thermal.setTrimHeaterState(0, 0)	# cold plate off this fill fail
+ 		thermal.setTrimHeaterState(1, 0)	# cryo plate off
+
+		Step1()
+		raise
+
 
 	except KeyboardInterrupt:
 		raise
