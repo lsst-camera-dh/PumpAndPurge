@@ -30,6 +30,14 @@ def CCSattachProxy(target):
 thermal = CCSattachProxy("thermal")
 vacuum= CCSattachProxy("vacuum")
 
+def getvacuum( ):
+	vac = vacuum.sendSynchCommand("CryoVac getValue")
+	logging.info("CyroVac getValu returns {} Torr".format(vac))
+	if math.isnan(vac):
+		raise
+
+	return vac
+
 class Monitor:
 	def __init__(self,target,verbose=False):
 		self.target=target
@@ -101,15 +109,16 @@ def PriorSteps():
 
 #
 #	# 0 (off), > 0 (manual - fixed power) or < 0 (auto - fixed temperature)
-# 	thermal.setTrimHeaterState(0, -1)	# cold plate onon
-# 	thermal.setTrimHeaterState(1, -1)	# cold plate onon
-#
+ 	thermal.setTrimHeaterState(0, -1)	# cold plate onon
+ 	thermal.setTrimHeaterState(1, -1)	# cold plate onon
+
 ##2.       Turn on both cryostat housing band heaters and set the band temperature to ~40 C.
- 	# thermal.setHeaterPowerEnable(0, 1)
- 	# thermal.setHeaterPowerEnable(1, 1)
-	logging.info("PriorSteps Open the CryoValve")
-	vacuum.setNamedSwitchOn("CryoValve",True) #### NEED TO BE TESTED
+
+	lwrbndhtr("on")
+	upperbandhtr("on")
 # 3.       Open the Cryostat gate valve.
+	vacuum.setNamedSwitchOn("CryoValve",True) #### NEED TO BE TESTED
+	logging.info("PriorSteps Open the CryoValve")
 
 
 def step1( ):
@@ -121,12 +130,12 @@ def step1( ):
 	NitrogenFlow("off")
 
 	# wail until the pressure gets below 760 Torr
+	# this will stops forever if the cryostat is overpressurised. Need to put ScrollPump on in the PriorStep
 	vac = 780
 	while vac > 760:
 		time.sleep(6)
 		# not sure why but vacuum.CryoVac canot be used
-		vac = vacuum.sendSynchCommand("CryoVac getValue")
-		logging.info("CyroVac getValu returns {} Torr".format(vac))
+		vac = getvacuum()
 
 	ScrollPump("on")
 
@@ -137,8 +146,7 @@ def step2( lowpress=1. ):
 	while vac > lowpress:
 		time.sleep(6)
 		# not sure why but vacuum.CryoVac canot be used
-		vac = vacuum.sendSynchCommand("CryoVac getValue")
-		logging.info("CyroVac getValue returns {} Torr".format(vac))
+		vac = getvacuum()
 #		CheckTemp()
 
 
@@ -159,16 +167,14 @@ def step5( ):
 	while vac < 550:
 		time.sleep(6)
 		# not sure why but vacuum.CryoVac canot be used
-		vac = vacuum.sendSynchCommand("CryoVac getValue")
-		logging.info("CyroVac getValue returns {} Torr: 1".format(vac))
+		vac = getvacuum( )
 #		CheckTemp()
 
 	NitrogenHeater("off")
 	while vac < 750:
 		time.sleep(6)
 		# not sure why but vacuum.CryoVac canot be used
-		vac = vacuum.sendSynchCommand("CryoVac getValue")
-		logging.info("CyroVac getValue returns {} Torr: 2".format(vac))
+		vac = getvacuum( )
 #		CheckTemp()
 	NitrogenFlow("off")
 	LowerN2Valve("off")
@@ -177,16 +183,19 @@ def Cleanup():
 	logging.info("Clean up. Turn off heaters and close the valve.")
 #
 #	# 0 (off), > 0 (manual - fixed power) or < 0 (auto - fixed temperature)
- 	thermal.setTrimHeaterState(0, 0)	# cold plate onon
- 	thermal.setTrimHeaterState(1, 0)	# cold plate onon
  	thermal.setPlateTemperature(0, 17)	# cold plate
  	thermal.setPlateTemperature(1, 17)	# cryo plate
+ 	thermal.setTrimHeaterState(0, 0)	# cold plate onon
+ 	thermal.setTrimHeaterState(1, 0)	# cold plate onon
 
 # 3.       Close the Cryostat gate valve.
 	vacuum.setNamedSwitchOn("CryoValve",False) #### NEED TO BE TESTED
 	NitrogenHeater("off")
 	NitrogenFlow("off")
 	LowerN2Valve("off")
+	lwrbndhtr("off")
+	upperbandhtr("off")
+
 
 def toggle( string, state ):
 	logging.info("Turn {} {}".format(string, state))
@@ -195,6 +204,12 @@ def toggle( string, state ):
 	pduprxy = getattr(pduprxy,target[1])()
 	pduprxy = getattr(pduprxy,"forceOutlet{}".format(state.capitalize()))
 	pduprxy("{}".format(target[2]))
+
+def lwrbndhtr( state ):
+	toggle("pap-pdu/PDU230/lwrbandhtr",state)
+
+def upperbandhtr( state ):
+	toggle("pap-pdu/PDU230/upperbandhtr",state)
 
 def ScrollPump( state ):
 	toggle("pap-pdu/PDU230/vacuumscrollpump",state)
@@ -227,14 +242,6 @@ def main(N,lowpress):
 			step3()
 			step4()
 			step5()
- 		thermal.setTrimHeaterPower(0, 0)
- 		thermal.setTrimHeaterPower(1, 0)
- 		thermal.setTrimHeaterState(0, 0)	# cold plate off this fill fail
- 		thermal.setTrimHeaterState(1, 0)	# cryo plate off
-
-		Step1()
-		raise
-
 
 	except KeyboardInterrupt:
 		raise
