@@ -32,7 +32,7 @@ vacuum= CCSattachProxy("vacuum")
 
 def getvacuum( ):
 	vac = vacuum.sendSynchCommand("CryoVac getValue")
-	logging.info("CyroVac getValu returns {} Torr".format(vac))
+	logging.info("CyroVac getValue returns {} Torr".format(vac))
 	if math.isnan(vac):
 		raise
 
@@ -104,7 +104,7 @@ def PriorSteps():
 #Set cryo plate temperature and cold plate temperature at feedback control. 
 #Cryo = 40 C and Cold = 40 C (Martin said that the cold plate can be set at 60 C). 
 #                The L3 lens has a upper temperature limit of 40 C.
- 	thermal.setPlateTemperature(0, 35)	# cold plate
+ 	thermal.setPlateTemperature(0, 30)	# cold plate; target temperature is adjusted so that it won't trip off
  	thermal.setPlateTemperature(1, 35)	# cryo plate
 
 #
